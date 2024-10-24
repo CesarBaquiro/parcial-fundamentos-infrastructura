@@ -1,7 +1,7 @@
 section .data
     prompt1 db 'Ingrese el primer numero (o "exit" para salir): ', 0
     prompt2 db 'Ingrese el segundo numero: ', 0
-    prompt_op db 'Ingrese la operacion (+, -, *, /, %): ', 0
+    prompt_op db 'Ingrese la operacion (+, -, *, /): ', 0
     result_msg db 'El resultado es: ', 0
     error_msg db 'Error: Division por cero!', 0
     invalid_input_msg db 'Error: Entrada invalida!', 0
@@ -91,8 +91,6 @@ main_loop:
     je multiplicacion
     cmp al, '/'         ; División
     je division
-    cmp al, '%'         ; Módulo
-    je modulo
 
     ; Si la operación no es válida, volver a imprimir el mensaje de entrada inválida
     jmp invalid_input
@@ -125,14 +123,6 @@ error_division:
     syscall
     jmp main_loop       ; Regresar al inicio del bucle principal
 
-modulo:
-    cmp rcx, 0
-    je error_division
-    xor rdx, rdx        ; Limpiar rdx antes de la división
-    idiv rcx            ; Dividir rbx entre rcx
-    mov rbx, rdx        ; El resultado del módulo está en rdx
-    jmp imprimir_resultado
-
 imprimir_resultado:
     ; Mostrar el resultado
     mov rsi, rbx
@@ -150,7 +140,6 @@ imprimir_resultado:
     mov rdx, 1
     syscall
 
-    ; Aquí puedes agregar un mensaje para preguntar si desea realizar otra operación
     jmp main_loop       ; Regresar al inicio del bucle principal
 
 invalid_input:
@@ -219,12 +208,12 @@ convertir_loop_2:
 
     ; Escribir los caracteres en el buffer
     mov rbx, rcx         ; Número de caracteres
-    pop_loop:
-        pop rax          ; Recuperar el carácter de la pila
-        mov [rdi], al    ; Guardar el carácter en el resultado
-        inc rdi          ; Mover el puntero hacia adelante
-        dec rbx
-        jnz pop_loop
+pop_loop:
+    pop rax              ; Recuperar el carácter de la pila
+    mov [rdi], al        ; Guardar el carácter en el resultado
+    inc rdi              ; Mover el puntero hacia adelante
+    dec rbx
+    jnz pop_loop
 
     mov byte [rdi], 0    ; Añadir terminador nulo
     ret
