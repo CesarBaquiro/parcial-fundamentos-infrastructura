@@ -1,254 +1,182 @@
-section .data
-    prompt1 db 'Ingrese el primer numero (o "exit" para salir): ', 0
-    prompt2 db 'Ingrese el segundo numero: ', 0
-    prompt_op db 'Ingrese la operacion (+, -, *, /, %): ', 0
-    result_msg db 'El resultado es: ', 0
-    error_msg db 'Error: Division por cero!', 0
-    invalid_input_msg db 'Error: Entrada invalida!', 0
-    exit_msg db 'Saliendo...', 0
-    newline db 0xA, 0  ; Nueva línea
-
 section .bss
-    number1 resb 20     ; Buffer para el primer número (incluyendo espacio para "exit")
-    number2 resb 20     ; Buffer para el segundo número
-    operation resb 2    ; Buffer para la operación
-    result resb 20      ; Buffer para el resultado en ASCII
+        buffer resb 128 ; Reserva un buffer de 128 bytes
+        num1 resb 16    ; Buffer para el primer número
+        num2 resb 16    ; Buffer para el segundo número
+        result resb 16  ; Buffer para el resultado
+
+section .data
+        mensaje db 'Seleccione una opcion: ', 0xA
+        opciones db '1. Suma - 2. Resta - 3. Multiplicacion - 4. Division - 5. Residuo', 0xA
+        entrada_num db 'Ingrese el primer numero: ', 0xA
+        segundo_num db 'Ingrese el segundo numero: ', 0xA
+        resultado_msg db 'El resultado es: ', 0xA
 
 section .text
-    global _start
+        global _start
 
 _start:
-    ; Bucle principal para realizar operaciones
-main_loop:
-    ; Solicitar el primer número
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, prompt1
-    mov rdx, 50
-    syscall
+        ; Mostrar el menú de opciones
+        mov eax, 4          ; Número de llamada del sistema sys_write
+        mov ebx, 1          ; Descriptor de archivo 1 (stdout)
+        mov ecx, mensaje    ; Dirección del mensaje
+        mov edx, 24         ; Longitud del mensaje
+        int 0x80
 
-    ; Leer el primer número
-    mov rax, 0
-    mov rdi, 0
-    mov rsi, number1
-    mov rdx, 20
-    syscall
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, opciones
+        mov edx, 90
+        int 0x80
 
-    ; Verificar si el usuario desea salir
-    mov rsi, number1
-    call check_exit
-    cmp rax, 1          ; Si rax es 1, se quiere salir
-    je exit_program
+        ; Leer la opción ingresada
+        mov eax, 3
+        mov ebx, 0
+        mov ecx, buffer
+        mov edx, 1          ; Leer solo un carácter (opción)
+        int 0x80
 
-    ; Solicitar el segundo número
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, prompt2
-    mov rdx, 30
-    syscall
+        ; Convertir el carácter a su valor numérico
+        sub byte [buffer], '0'
 
-    ; Leer el segundo número
-    mov rax, 0
-    mov rdi, 0
-    mov rsi, number2
-    mov rdx, 20
-    syscall
+        ; Comparar la opción y saltar a la función correspondiente
+        cmp byte [buffer], 1
+        je sumar
+        cmp byte [buffer], 2
+        je restar
+        cmp byte [buffer], 3
+        je multiplicar
+        cmp byte [buffer], 4
+        je dividir
+        cmp byte [buffer], 5
+        je residuo
 
-    ; Solicitar la operación
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, prompt_op
-    mov rdx, 40
-    syscall
+sumar:
+        ; Pedir los números
+        call leer_numeros
 
-    ; Leer la operación
-    mov rax, 0
-    mov rdi, 0
-    mov rsi, operation
-    mov rdx, 2
-    syscall
+        ; Realizar la suma
+        mov eax, [num1]
+        add eax, [num2]
 
-    ; Convertir los números de ASCII a enteros
-    mov rsi, number1
-    call ascii_a_entero
-    cmp rax, 0          ; Verifica si la conversión fue exitosa
-    jl invalid_input     ; Si rax < 0, fue una entrada inválida
-    mov rbx, rax        ; Guardar el primer número en rbx
+        ; Guardar el resultado
+        mov [result], eax
 
-    mov rsi, number2
-    call ascii_a_entero
-    cmp rax, 0          ; Verifica si la conversión fue exitosa
-    jl invalid_input     ; Si rax < 0, fue una entrada inválida
-    mov rcx, rax        ; Guardar el segundo número en rcx
+        ; Mostrar el resultado
+        call mostrar_resultado
+        jmp salir
 
-    ; Realizar la operación
-    mov al, [operation]
-    cmp al, '+'         ; Suma
-    je suma
-    cmp al, '-'         ; Resta
-    je resta
-    cmp al, '*'         ; Multiplicación
-    je multiplicacion
-    cmp al, '/'         ; División
-    je division
-    cmp al, '%'         ; Módulo
-    je modulo
+restar:
+        ; Pedir los números
+        call leer_numeros
 
-    ; Si la operación no es válida, volver a imprimir el mensaje de entrada inválida
-    jmp invalid_input
+        ; Realizar la resta
+        mov eax, [num1]
+        sub eax, [num2]
 
-suma:
-    add rbx, rcx
-    jmp imprimir_resultado
+        ; Guardar el resultado
+        mov [result], eax
 
-resta:
-    sub rbx, rcx
-    jmp imprimir_resultado
+        ; Mostrar el resultado
+        call mostrar_resultado
+        jmp salir
 
-multiplicacion:
-    imul rbx, rcx
-    jmp imprimir_resultado
+multiplicar:
+        ; Implementar la multiplicación aquí
 
-division:
-    cmp rcx, 0
-    je error_division
-    xor rdx, rdx        ; Limpiar rdx antes de la división
-    idiv rcx            ; Dividir rbx entre rcx
-    jmp imprimir_resultado
+dividir:
+        ; Implementar la división aquí
 
-error_division:
-    ; Mostrar mensaje de error
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, error_msg
-    mov rdx, 30
-    syscall
-    jmp main_loop       ; Regresar al inicio del bucle principal
+residuo:
+        ; Implementar el residuo aquí
 
-modulo:
-    cmp rcx, 0
-    je error_division
-    xor rdx, rdx        ; Limpiar rdx antes de la división
-    idiv rcx            ; Dividir rbx entre rcx
-    mov rbx, rdx        ; El resultado del módulo está en rdx
-    jmp imprimir_resultado
+leer_numeros:
+        ; Leer el primer número
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, entrada_num
+        mov edx, 26
+        int 0x80
 
-imprimir_resultado:
-    ; Mostrar el resultado
-    mov rsi, rbx
-    call int_to_string
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, result
-    mov rdx, 20
-    syscall
+        mov eax, 3
+        mov ebx, 0
+        mov ecx, num1
+        mov edx, 16
+        int 0x80
 
-    ; Nueva línea
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, newline
-    mov rdx, 1
-    syscall
+        ; Convertir el primer número
+        call convertir_a_numero
+        mov [num1], eax
 
-    ; Aquí puedes agregar un mensaje para preguntar si desea realizar otra operación
-    jmp main_loop       ; Regresar al inicio del bucle principal
+        ; Leer el segundo número
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, segundo_num
+        mov edx, 26
+        int 0x80
 
-invalid_input:
-    ; Mostrar mensaje de entrada inválida
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, invalid_input_msg
-    mov rdx, 30
-    syscall
-    jmp main_loop       ; Regresar al inicio del bucle principal
+        mov eax, 3
+        mov ebx, 0
+        mov ecx, num2
+        mov edx, 16
+        int 0x80
 
-exit_program:
-    ; Mostrar mensaje de salida
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, exit_msg
-    mov rdx, 20
-    syscall
+        ; Convertir el segundo número
+        call convertir_a_numero
+        mov [num2], eax
+        ret
 
-    ; Salir del programa
-    mov rax, 60
-    xor rdi, rdi
-    syscall
-
-; Función: ascii_a_entero
-; Convierte una cadena de caracteres ASCII a un entero en rax
-ascii_a_entero:
-    xor rax, rax        ; Limpiar rax (resultado)
-    xor rbx, rbx        ; Limpiar rbx (acumulador)
-    mov rdi, rsi        ; Puntero a la cadena de entrada
-
+convertir_a_numero:
+        ; Convierte el número leído (en formato ASCII) a un valor numérico
+        xor eax, eax
+        xor ebx, ebx
 convertir_loop:
-    mov al, [rdi]       ; Leer el siguiente carácter
-    cmp al, 0           ; Verificar si es el fin de la cadena
-    je fin_conversion
-    cmp al, '0'
-    jl fin_conversion    ; Salir si no es un dígito
-    cmp al, '9'
-    jg fin_conversion    ; Salir si no es un dígito
-    sub al, '0'         ; Convertir de ASCII a número
-    imul rbx, rbx, 10   ; Multiplicar acumulador por 10
-    add rbx, rax        ; Sumar el dígito al acumulador
-    inc rdi             ; Avanzar al siguiente carácter
-    jmp convertir_loop
+        mov bl, byte [ecx]
+        cmp bl, 0xA        ; Verificar si es salto de línea
+        je convertir_fin
+        sub bl, '0'
+        imul eax, eax, 10
+        add eax, ebx
+        inc ecx
+        jmp convertir_loop
+convertir_fin:
+        ret
 
-fin_conversion:
-    mov rax, rbx        ; Devolver el número convertido
-    ret
+mostrar_resultado:
+        ; Mostrar el mensaje de resultado
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, resultado_msg
+        mov edx, 17
+        int 0x80
 
-; Función: int_to_string
-; Convierte el entero en RAX a una cadena ASCII en RDI
-int_to_string:
-    test rax, rax
-    jz es_cero           ; Si el número es cero, maneja esto
-    mov rdi, result     ; Preparar el puntero para la cadena de resultado
-    xor rcx, rcx        ; Contador de caracteres
-convertir_loop_2:
-    xor rdx, rdx         ; Limpiar el residuo
-    mov rbx, 10          ; Divisor para la conversión a ASCII
-    div rbx              ; Dividir rax entre 10
-    add dl, '0'          ; Convertir el residuo en un carácter ASCII
-    push rdx             ; Almacenar el carácter en la pila
-    inc rcx              ; Contar el carácter
-    test rax, rax        ; Verificar si rax es 0
-    jnz convertir_loop_2 ; Si no, repetir
+        ; Convertir el resultado a formato ASCII y mostrarlo
+        mov eax, [result]
+        call convertir_a_ascii
 
-    ; Escribir los caracteres en el buffer
-    mov rbx, rcx         ; Número de caracteres
-    pop_loop:
-        pop rax          ; Recuperar el carácter de la pila
-        mov [rdi], al    ; Guardar el carácter en el resultado
-        inc rdi          ; Mover el puntero hacia adelante
-        dec rbx
-        jnz pop_loop
+        ; Mostrar el resultado convertido
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, result
+        mov edx, 16
+        int 0x80
+        ret
 
-    mov byte [rdi], 0    ; Añadir terminador nulo
-    ret
+convertir_a_ascii:
+        ; Convertir el número en eax a una cadena ASCII en result
+        xor ebx, ebx
+        mov ecx, result + 15
+        mov byte [ecx], 0
+convertir_a_ascii_loop:
+        xor edx, edx
+        div dword [10]     ; Dividir eax por 10
+        add dl, '0'
+        dec ecx
+        mov [ecx], dl
+        test eax, eax
+        jnz convertir_a_ascii_loop
+        ret
 
-es_cero:
-    mov byte [result], '0'  ; Si el número es 0, poner '0'
-    mov byte [result + 1], 0 ; Añadir terminador nulo
-    ret
-
-; Función: check_exit
-; Verifica si el usuario ha escrito "exit"
-check_exit:
-    mov rsi, number1     ; Puntero a la cadena
-    mov rdi, exit_msg
-    mov rbx, 4           ; Longitud de "exit"
-    mov rdx, 0           ; Inicializa rdx en 0
-next_char:
-    cmp byte [rsi + rdx], [rdi + rdx] ; Comparar caracteres
-    jne not_exit
-    inc rdx
-    cmp rdx, rbx
-    jl next_char
-    mov rax, 1          ; Indicar que se desea salir
-    ret
-not_exit:
-    xor rax, rax        ; Indicar que no se desea salir
-    ret
+salir:
+        mov eax, 1
+        xor ebx, ebx
+        int 0x80
